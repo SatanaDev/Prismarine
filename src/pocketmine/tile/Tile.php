@@ -125,8 +125,7 @@ abstract class Tile extends Position{
 		$this->namedtag = $nbt;
 		$this->server = $level->getServer();
 		$this->setLevel($level);
-		$this->chunk = $level->getChunk($this->namedtag->x->getValue() >> 4, $this->namedtag->z->getValue() >> 4, false);
-		assert($this->chunk !== null);
+		$this->chunk = $level->getLoadedChunk($this->namedtag->x->getValue() >> 4, $this->namedtag->z->getValue() >> 4);
 
 		$this->name = "";
 		$this->lastUpdate = microtime(true);

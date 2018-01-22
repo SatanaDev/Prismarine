@@ -868,7 +868,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			++$count;
 
 			$this->usedChunks[$index] = false;
-			$this->level->registerChunkLoader($this, $X, $Z, false);
+			$this->level->registerChunkLoader($this, $X, $Z, true);
 
 			if(!$this->level->populateChunk($X, $Z)){
 				continue;
@@ -1498,7 +1498,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$revert = true;
 		}else{
 			if($this->chunk === null or !$this->chunk->isGenerated()){
-				$chunk = $this->level->getChunk($newPos->x >> 4, $newPos->z >> 4, false);
+				$chunk = $this->level->getChunk($newPos->x >> 4, $newPos->z >> 4);
 				if($chunk === null or !$chunk->isGenerated()){
 					$revert = true;
 					$this->nextChunkOrderRun = 0;
@@ -1996,7 +1996,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				$this->dataPacket($pk);
 				break;
 			case ResourcePackClientResponsePacket::STATUS_COMPLETED:
-				$this->completeLoginSequence();
+				$this->level->registerChunkLoader($this, ((int) floor($this->namedtag["Pos"][0])) >> 4, ((int) floor($this->namedtag["Pos"][2])) >> 4, true, function(Chunk $chunk){
+					if($this->isConnected()){
+						$this->completeLoginSequence();
+					}
+				});
 				break;
 			default:
 				return false;

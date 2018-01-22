@@ -21,29 +21,17 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\level\format\io\region;
+namespace pocketmine\level\format\io;
 
-use pocketmine\level\format\io\ThreadedChunkProvider;
+use pocketmine\level\format\Chunk;
 
-class Anvil extends McRegion{
+interface InternalChunkProvider{
 
-	const REGION_FILE_EXTENSION = "mca";
+	public function readChunk(int $chunkX, int $chunkZ) : ?Chunk;
 
-	protected function createChunkProvider() : ThreadedChunkProvider{
-		return new ThreadedChunkProvider(AnvilChunkProvider::class, $this->path);
-	}
+	public function writeChunk(Chunk $chunk) : void;
 
-	public static function getProviderName() : string{
-		return "anvil";
-	}
+	public function doGarbageCollection() : void;
 
-	public static function getPcWorldFormatVersion() : int{
-		return 19133; //anvil
-	}
-
-	public function getWorldHeight() : int{
-		//TODO: add world height options
-		return 256;
-	}
-
+	public function close() : void;
 }
