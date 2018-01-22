@@ -27,6 +27,7 @@ use pocketmine\level\format\io\BaseLevelProvider;
 use pocketmine\level\format\io\ThreadedChunkProvider;
 use pocketmine\level\generator\Generator;
 use pocketmine\level\Level;
+use pocketmine\nbt\NBT;
 use pocketmine\nbt\tag\{
 	ByteTag, CompoundTag, IntTag, LongTag, StringTag
 };
