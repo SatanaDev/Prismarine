@@ -67,7 +67,9 @@ use pocketmine\event\Timings;
 use pocketmine\inventory\InventoryHolder;
 use pocketmine\item\Item;
 use pocketmine\level\format\Chunk;
+use pocketmine\level\format\ChunkException;
 use pocketmine\level\format\io\BaseLevelProvider;
+use pocketmine\level\format\io\ChunkRequestTask;
 use pocketmine\level\format\io\LevelProvider;
 use pocketmine\level\generator\GenerationTask;
 use pocketmine\level\generator\Generator;
@@ -323,7 +325,7 @@ class Level implements ChunkManager, Metadatable{
 		/** @var LevelProvider $provider */
 
 		if(is_subclass_of($provider, LevelProvider::class, true)){
-			$this->provider = new $provider($this, $path);
+			$this->provider = new $provider($path);
 		}else{
 			throw new LevelException("Provider is not a subclass of LevelProvider");
 		}
@@ -1033,8 +1035,7 @@ class Level implements ChunkManager, Metadatable{
 	public function saveChunks(){
 		foreach($this->chunks as $chunk){
 			if($chunk->hasChanged() and $chunk->isGenerated()){
-				$this->provider->setChunk($chunk->getX(), $chunk->getZ(), $chunk);
-				$this->provider->saveChunk($chunk->getX(), $chunk->getZ());
+				$this->provider->saveChunk($chunk);
 				$chunk->setChanged(false);
 			}
 		}
@@ -2286,6 +2287,10 @@ class Level implements ChunkManager, Metadatable{
 		if($chunk === null){
 			return;
 		}
+
+		$chunk->setX($chunkX);
+		$chunk->setZ($chunkZ);
+
 		$index = Level::chunkHash($chunkX, $chunkZ);
 		$oldChunk = $this->getChunk($chunkX, $chunkZ, false);
 		if($unload and $oldChunk !== null){
@@ -2309,7 +2314,6 @@ class Level implements ChunkManager, Metadatable{
 				$tile->chunk = $chunk;
 			}
 
-			$this->provider->setChunk($chunkX, $chunkZ, $chunk);
 			$this->chunks[$index] = $chunk;
 		}
 
@@ -2344,7 +2348,7 @@ class Level implements ChunkManager, Metadatable{
 	 * @return bool
 	 */
 	public function isChunkLoaded(int $x, int $z) : bool{
-		return isset($this->chunks[Level::chunkHash($x, $z)]) or $this->provider->isChunkLoaded($x, $z);
+		return isset($this->chunks[Level::chunkHash($x, $z)]);
 	}
 
 	/**
@@ -2427,8 +2431,12 @@ class Level implements ChunkManager, Metadatable{
 				}
 				$this->timings->syncChunkSendPrepareTimer->startTiming();
 
-				$task = $this->provider->requestChunkTask($x, $z);
-				$this->server->getScheduler()->scheduleAsyncTask($task);
+				$chunk = $this->chunks[$index] ?? null;
+				if(!($chunk instanceof Chunk)){
+					throw new ChunkException("Invalid Chunk sent");
+				}
+
+				$this->server->getScheduler()->scheduleAsyncTask(new ChunkRequestTask($this, $chunk));
 
 				$this->timings->syncChunkSendPrepareTimer->stopTiming();
 			}
@@ -2556,7 +2564,12 @@ class Level implements ChunkManager, Metadatable{
 
 		$this->cancelUnloadChunkRequest($x, $z);
 
-		$chunk = $this->provider->getChunk($x, $z, $generate);
+		$this->timings->syncChunkLoadDataTimer->startTiming();
+
+		$chunk = $this->provider->loadChunk($x, $z, $generate);
+
+		$this->timings->syncChunkLoadDataTimer->stopTiming();
+
 		if($chunk === null){
 			if($generate){
 				throw new \InvalidStateException("Could not create new Chunk");
@@ -2624,12 +2637,11 @@ class Level implements ChunkManager, Metadatable{
 			$this->server->getPluginManager()->callEvent($ev = new ChunkUnloadEvent($this, $chunk));
 			if($ev->isCancelled()){
 				$this->timings->doChunkUnload->stopTiming();
+
 				return false;
 			}
-		}
 
-		try{
-			if($chunk !== null){
+			try{
 				if($trySave and $this->getAutoSave() and $chunk->isGenerated()){
 					$entities = 0;
 					foreach($chunk->getEntities() as $e){
@@ -2640,20 +2652,20 @@ class Level implements ChunkManager, Metadatable{
 					}
 
 					if($chunk->hasChanged() or count($chunk->getTiles()) > 0 or $entities > 0){
-						$this->provider->setChunk($x, $z, $chunk);
-						$this->provider->saveChunk($x, $z);
+						$this->provider->saveChunk($chunk);
 					}
 				}
 
 				foreach($this->getChunkLoaders($x, $z) as $loader){
 					$loader->onChunkUnloaded($chunk);
 				}
+
+				$chunk->onUnload();
+			}catch(\Throwable $e){
+				$logger = $this->server->getLogger();
+				$logger->error($this->server->getLanguage()->translateString("pocketmine.level.chunkUnloadError", [$e->getMessage()]));
+				$logger->logException($e);
 			}
-			$this->provider->unloadChunk($x, $z, $safe);
-		}catch(\Throwable $e){
-			$logger = $this->server->getLogger();
-			$logger->error($this->server->getLanguage()->translateString("pocketmine.level.chunkUnloadError", [$e->getMessage()]));
-			$logger->logException($e);
 		}
 
 		unset($this->chunks[$index]);
@@ -2880,12 +2892,6 @@ class Level implements ChunkManager, Metadatable{
 				if(!$this->isSpawnChunk($X, $Z)){
 					$this->unloadChunkRequest($X, $Z, true);
 				}
-			}
-		}
-
-		foreach($this->provider->getLoadedChunks() as $chunk){
-			if(!isset($this->chunks[Level::chunkHash($chunk->getX(), $chunk->getZ())])){
-				$this->provider->unloadChunk($chunk->getX(), $chunk->getZ(), false);
 			}
 		}
 
