@@ -173,11 +173,14 @@ class Multiversion{
 				$pk->item = $packet->item;
 				return [$pk];
 		}
-		$pk = clone $packet;
-		$pk->protocol = ProtocolInfo::MULTIVERSION_PROTOCOL;
-		$pk->reset();
-		$pk->isEncoded = false;
-		return [$pk];
+		if(self::convertPID($packet->pid()) !== null){
+			$pk = clone $packet;
+			$pk->protocol = ProtocolInfo::MULTIVERSION_PROTOCOL;
+			$pk->reset();
+			$pk->isEncoded = false;
+			return [$pk];
+		}
+		return [];
 	}
 
 }

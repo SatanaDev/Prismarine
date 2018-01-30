@@ -174,11 +174,11 @@ class RakLibInterface implements ServerInstance, AdvancedSourceInterface{
 				"MCPE",
 				rtrim(addcslashes($name, ";"), '\\'),
 				ProtocolInfo::CURRENT_PROTOCOL,
-				ProtocolInfo::MINECRAFT_VERSION_NETWORK,
+				ProtocolInfo::MULTIVERSION_VERSION_NETWORK,
 				$info->getPlayerCount(),
 				$info->getMaxPlayerCount(),
 				$this->rakLib->getServerId(),
-				$name,
+				$name . " - v" . ProtocolInfo::MINECRAFT_VERSION_NETWORK,
 				Server::getGamemodeName($this->server->getGamemode())
 			]) . ";"
 		);
@@ -198,8 +198,8 @@ class RakLibInterface implements ServerInstance, AdvancedSourceInterface{
 	public function putPacket(Player $player, DataPacket $packet, bool $needACK = false, bool $immediate = true){
 		if(isset($this->identifiers[$h = spl_object_hash($player)])){
 			$identifier = $this->identifiers[$h];
-			if(!($packet instanceof BatchPacket) and $player->getProtocol() === ProtocolInfo::MULTIVERSION_PROTOCOL and $packet->protocol !== ProtocolInfo::MULTIVERSION_PROTOCOL){
-				$this->server->batchPackets([$player], Multiversion::convertTo120($packet, $player), true, $immediate);
+			if(!($packet instanceof BatchPacket) and $player->getProtocol() === ProtocolInfo::MULTIVERSION_PROTOCOL and $packet->protocol !== ProtocolInfo::MULTIVERSION_PROTOCOL and count($packets = Multiversion::convertTo120($packet, $player)) > 0){
+				$this->server->batchPackets([$player], $packets, true, $immediate);
 				return null;
 			}
 			if(!$packet->isEncoded){
