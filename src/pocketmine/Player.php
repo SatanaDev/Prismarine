@@ -259,6 +259,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected $username;
 	protected $iusername;
 	protected $displayName;
+	/** @var int */
+	protected $protocol = ProtocolInfo::CURRENT_PROTOCOL;
 	protected $languageCode = "en_UK";
 	protected $startAction = -1;
 	/** @var Vector3|null */
@@ -824,13 +826,15 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->usedChunks[Level::chunkHash($x, $z)] = true;
 		$this->chunkLoadCount++;
 
-		$pk = new ChunkRadiusUpdatedPacket();
-		$pk->radius = 16;
-		$this->server->getScheduler()->scheduleDelayedTask(new CallbackTask([$this, "dataPacket"], [$pk]), 5);
+		if($this->protocol < ProtocolInfo::MULTIVERSION_PROTOCOL){ //1.2 hasn't this bug
+			$pk = new ChunkRadiusUpdatedPacket();
+			$pk->radius = $this->viewDistance + 4;
+			$this->server->getScheduler()->scheduleDelayedTask(new CallbackTask([$this, "dataPacket"], [$pk]), 5);
 
-		$pk1 = new ChunkRadiusUpdatedPacket();
-		$pk1->radius = $this->viewDistance;
-		$this->server->getScheduler()->scheduleDelayedTask(new CallbackTask([$this, "dataPacket"], [$pk1]), 10);
+			$pk1 = new ChunkRadiusUpdatedPacket();
+			$pk1->radius = $this->viewDistance;
+			$this->server->getScheduler()->scheduleDelayedTask(new CallbackTask([$this, "dataPacket"], [$pk1]), 10);
+		}
 
 		$this->dataPacket($payload);
 
@@ -1317,6 +1321,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$pk->noClip = $this->isSpectator();
 		$pk->isFlying = $this->flying;
 		$pk->userPermission = ($this->isOp() ? AdventureSettingsPacket::PERMISSION_OPERATOR : AdventureSettingsPacket::PERMISSION_NORMAL);
+		$pk->entityUniqueId = $this->getId();
 		$this->dataPacket($pk);
 	}
 
@@ -1887,8 +1892,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			return false;
 		}
 
-		if($packet->protocol !== ProtocolInfo::CURRENT_PROTOCOL){
-			if($packet->protocol < ProtocolInfo::CURRENT_PROTOCOL){
+		if($packet->protocol !== ProtocolInfo::CURRENT_PROTOCOL and $packet->protocol !== ProtocolInfo::MULTIVERSION_PROTOCOL){
+			if($packet->protocol < ProtocolInfo::MULTIVERSION_PROTOCOL){
 				$message = "disconnectionScreen.outdatedClient";
 				$this->sendPlayStatus(PlayStatusPacket::LOGIN_FAILED_CLIENT, true);
 			}else{
@@ -1905,6 +1910,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->iusername = strtolower($this->username);
 		$this->setDataProperty(self::DATA_NAMETAG, self::DATA_TYPE_STRING, $this->username, false);
 
+		$this->protocol = $packet->protocol;
 		$this->languageCode = $packet->languageCode;
 
 		if($this->server->getConfigBoolean("online-mode", false) && $packet->identityPublicKey === null){
@@ -3678,6 +3684,15 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 */
 	public function getName(){
 		return $this->username;
+	}
+
+	/**
+	 * Gets the protocol
+	 *
+	 * @return int
+	 */
+	public function getProtocol() : int{
+		return $this->protocol;
 	}
 
 	/**

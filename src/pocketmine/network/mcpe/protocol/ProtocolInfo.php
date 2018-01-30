@@ -41,6 +41,11 @@ interface ProtocolInfo{
 	 */
 	const CURRENT_PROTOCOL = 113;
 	/**
+	 * Minecraft: BE protocol version, supported by multiversion system
+	 */
+	const MULTIVERSION_PROTOCOL = 160;
+
+	/**
 	 * Current Minecraft PE version reported by the server. This is usually the earliest currently supported version.
 	 */
 	const MINECRAFT_VERSION = 'v1.1.0';

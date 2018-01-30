@@ -60,6 +60,9 @@ use pocketmine\network\mcpe\protocol\ShowCreditsPacket;
 use pocketmine\network\mcpe\protocol\SpawnExperienceOrbPacket;
 use pocketmine\network\mcpe\protocol\TextPacket;
 use pocketmine\network\mcpe\protocol\UseItemPacket;
+use pocketmine\network\mcpe\protocol\v120\InventoryContentPacket;
+use pocketmine\network\mcpe\protocol\v120\InventorySlotPacket;
+use pocketmine\network\mcpe\protocol\v120\PlayerHotbarPacket;
 use pocketmine\Player;
 use pocketmine\Server;
 
@@ -230,5 +233,17 @@ class PlayerNetworkSessionAdapter extends NetworkSession{
 
 	public function handleResourcePackChunkRequest(ResourcePackChunkRequestPacket $packet) : bool{
 		return $this->player->handleResourcePackChunkRequest($packet);
+	}
+
+	public function handleInventoryContent(InventoryContentPacket $packet) : bool{
+		return true; //Not used
+	}
+
+	public function handleInventorySlot(InventorySlotPacket $packet) : bool{
+		return true; //Not used
+	}
+
+	public function handlePlayerHotbar(PlayerHotbarPacket $packet) : bool{
+		return true; //TODO
 	}
 }
