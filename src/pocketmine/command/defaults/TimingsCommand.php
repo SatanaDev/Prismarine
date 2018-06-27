@@ -110,10 +110,10 @@ class TimingsCommand extends VanillaCommand{
 				$sender->getServer()->getScheduler()->scheduleAsyncTask(new class([
 					["page" => "http://paste.ubuntu.com", "extraOpts" => [
 						CURLOPT_HTTPHEADER => ["User-Agent: " . $sender->getServer()->getName() . " " . $sender->getServer()->getPocketMineVersion()],
-                                                CURLOPT_POST => 1,
-                                                CURLOPT_POSTFIELDS => $data,
-                                                CURLOPT_AUTOREFERER => false,
-                                                CURLOPT_FOLLOWLOCATION => false
+                        CURLOPT_POST => 1,
+                        CURLOPT_POSTFIELDS => $data,
+                        CURLOPT_AUTOREFERER => false,
+                        CURLOPT_FOLLOWLOCATION => false
 					]]
 				], $sender) extends BulkCurlTask{
 					public function onCompletion(Server $server){
@@ -128,7 +128,7 @@ class TimingsCommand extends VanillaCommand{
 						}
 						list(, $headers) = $result;
 						foreach($headers as $headerGroup){
-                                                        if(isset($headerGroup["location"]) and preg_match('#^http://paste\\.ubuntu\\.com/([A-Za-z0-9+\/=]+)/#', trim($headerGroup["location"]), $match)){
+							if(isset($headerGroup["location"]) and preg_match('#^http://paste\\.ubuntu\\.com/([A-Za-z0-9+\/=]+)/#', trim($headerGroup["location"]), $match)){
 								$pasteId = $match[1];
 								break;
 							}
@@ -136,7 +136,7 @@ class TimingsCommand extends VanillaCommand{
 						if(isset($pasteId)){
 							$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.timingsUpload", ["http://paste.ubuntu.com/" . $pasteId . "/"]));
 							$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.timingsRead",
-                                                                ["http://" . $sender->getServer()->getProperty("timings.host", "timings.pmmp.io") . "/?url=" . urlencode($pasteId)]));
+								["http://" . $sender->getServer()->getProperty("timings.host", "timings.pmmp.io") . "/?url=" . urlencode($pasteId)]));
 						}else{
 							$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.pasteError"));
 						}
