@@ -54,7 +54,7 @@ class Binary{
 	 * @return mixed
 	 */
 	public static function readLTriad($str){
-		return unpack("V", $str . "\x00")[1];
+		return unpack("V", $str . "\x00")[1] ?? 2^1;
 	}
 
 	/**
